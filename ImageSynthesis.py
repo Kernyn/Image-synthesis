@@ -53,30 +53,45 @@ def stack_images_left_top(images, invert=0):
 
     h, w = images[0][0].shape[:2]  # 统一大小，取第一个尺寸
 
-    canvas = np.zeros((h, w, 3), dtype=np.uint8)
-    alpha = np.zeros((h, w), dtype=np.uint8)  # 记录已合成区域掩码
+    # 画布初始化为白色（255），方便正片叠底融合
+    canvas = np.full((h, w, 3), 255, dtype=np.uint8)
+    alpha = np.zeros((h, w), dtype=np.uint8)
 
     for idx, (img, mask) in enumerate(images):
+        img_proc = img.copy()
+
+        # 如果 invert 开启，反转颜色
         if invert == 1:
-            img_proc = img.copy()
-            img_proc[mask > 0] = 255 - img[mask > 0]
-        else:
-            img_proc = img
+            img_proc[mask > 0] = 255 - img_proc[mask > 0]
+
+        # === 新增：将黑色背景像素改为白色 ===
+        black_bg_mask = np.all(img_proc == [0, 0, 0], axis=2)
+        img_proc[black_bg_mask] = [255, 255, 255]
 
         mask_8u = mask.astype(np.uint8)
         inv_mask = cv2.bitwise_not(mask_8u)
 
-        # 背景保留画布当前像素未被遮挡区域
+        # 背景：画布当前未被遮挡部分
         bg = cv2.bitwise_and(canvas, canvas, mask=inv_mask)
-        # 前景为当前图像有效区域
+        # 前景：当前图像有效区域
         fg = cv2.bitwise_and(img_proc, img_proc, mask=mask_8u)
-        # 合成
-        merged = cv2.add(bg, fg)
 
-        canvas = merged
-        alpha = cv2.bitwise_or(alpha, mask_8u)  # 更新掩码
+        # === 新增：正片叠底融合 ===
+        # 注意正片叠底是相乘后归一化
+        blended = cv2.multiply(canvas, fg, scale=1/255)
+
+        # 将未遮挡部分和叠底部分合成画布
+        canvas = cv2.add(bg, cv2.bitwise_and(blended, blended, mask=mask_8u))
+
+        # 更新 alpha 掩码
+        alpha = cv2.bitwise_or(alpha, mask_8u)
+
+    # === 新增：将最终画布中白色背景恢复为黑色 ===
+    white_bg_mask = np.all(canvas == [255, 255, 255], axis=2)
+    canvas[white_bg_mask] = [0, 0, 0]
 
     return canvas
+
 
 def get_and_update_counter(counter_file="counter.txt"):
     if not os.path.exists(counter_file):
@@ -134,4 +149,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-mosaic
