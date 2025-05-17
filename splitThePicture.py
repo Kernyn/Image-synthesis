@@ -1,10 +1,3 @@
-# 开发人员:  caiyifeng
-# 开发时间:  2025/5/16  19:59
-# 文件名:    splitThePicture.PY
-# 开发人员: caiyifeng
-# 文件名: split_image.py
-# 功能: 将原图随机拆分为若干可拼回的碎片图
-
 import cv2
 import numpy as np
 import os
