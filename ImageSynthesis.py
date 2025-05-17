@@ -1,7 +1,3 @@
-# 开发人员:  caiyifeng
-# 开发时间:  2025/5/16
-# 文件名:    ImageSynthesis.py
-
 import cv2
 import numpy as np
 import glob
